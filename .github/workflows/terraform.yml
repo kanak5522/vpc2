@@ -31,7 +31,30 @@ jobs:
 
     - name: Terraform Plan
       run: terraform plan
+      id: plan
+
+    - name: Upload Terraform Plan as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: terraform-plan
+        path: terraform-plan.txt
+
+    - name: Await Manual Approval
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const context = github.context;
+          const issue = {
+            title: 'Manual Approval Required',
+            body: 'Please review the Terraform plan and approve the deployment.',
+            labels: ['terraform'],
+          };
+          await github.rest.issues.create({
+            ...context.repo,
+            ...issue,
+          });
 
     - name: Terraform Apply
       run: terraform apply -auto-approve
-      
+      if: github.event_name == 'push'
+      environment: staging  
